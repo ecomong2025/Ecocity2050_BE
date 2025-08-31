@@ -27,7 +27,7 @@ SECRET_KEY = os.getenv("SECRET_KEY", "fallback-secret-key")  # .env에 SECRET_KE
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []  # 배포 시 수정
+ALLOWED_HOSTS = ["ecocity2050-be.onrender.com", "127.0.0.1", "localhost"]
 
 # Application definition
 INSTALLED_APPS = [
