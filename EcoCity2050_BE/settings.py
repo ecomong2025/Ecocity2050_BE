@@ -13,8 +13,10 @@ https://docs.djangoproject.com/en/5.2/ref/settings/
 import os
 from pathlib import Path
 from dotenv import load_dotenv
-
 load_dotenv()
+
+KAKAO_REST_API_KEY = os.getenv("KAKAO_REST_API_KEY")
+KAKAO_REDIRECT_URI = os.getenv("KAKAO_REDIRECT_URI")
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -110,4 +112,16 @@ REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": (
         "rest_framework_simplejwt.authentication.JWTAuthentication",
     ),
+}
+
+# Swagger
+SWAGGER_SETTINGS = {
+    "SECURITY_DEFINITIONS": {
+        "Bearer": {
+            "type": "apiKey",
+            "name": "Authorization",
+            "in": "header",
+            "description": '예: Bearer {access_token}',
+        }
+    },
 }
