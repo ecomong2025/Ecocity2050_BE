@@ -1,6 +1,6 @@
 from django.urls import path
 from rest_framework_simplejwt.views import TokenRefreshView
-from .views import MyTokenObtainPairView, UserDetailView, kakao_login, kakao_callback
+from .views import MyTokenObtainPairView, UserDetailView, kakao_login, kakao_callback, kakao_userinfo
 
 urlpatterns = [
     # JWT 로그인 / 토큰
@@ -13,4 +13,7 @@ urlpatterns = [
     # 카카오 로그인
     path("users/kakao/login/", kakao_login, name="kakao_login"),
     path("users/kakao/callback/", kakao_callback, name="kakao_callback"),
+
+    # 카카오 로그인 기반 JWT 사용자 정보 조회
+    path("users/kakao/userinfo/", kakao_userinfo, name="kakao_userinfo"),
 ]

@@ -14,13 +14,11 @@ from .serializers import UserSerializer
 
 User = get_user_model()
 
-
 # JWT 로그인 (username/password)
 class MyTokenObtainPairView(TokenObtainPairView):
     @swagger_auto_schema(operation_description="JWT 토큰 발급 (username/password 로그인)")
     def post(self, request, *args, **kwargs):
         return super().post(request, *args, **kwargs)
-
 
 # 회원 정보 조회 (JWT)
 class UserDetailView(generics.RetrieveAPIView):
@@ -34,8 +32,7 @@ class UserDetailView(generics.RetrieveAPIView):
     def get_object(self):
         return self.request.user
 
-
-#카카오 로그인 시작: 카카오 인증 페이지 URL 반환
+# 카카오 로그인 시작: 인증 URL 반환
 @swagger_auto_schema(
     method="get",
     operation_description="카카오 로그인 시작 URL 반환",
@@ -54,8 +51,7 @@ def kakao_login(request):
     )
     return Response({"auth_url": kakao_auth_url})
 
-
-# 카카오 콜백: code로 사용자 정보 받아 회원가입/로그인 + JWT 발급
+# 카카오 콜백: code로 JWT 발급 + 사용자 생성/로그인
 code_param = openapi.Parameter(
     "code",
     openapi.IN_QUERY,
@@ -76,6 +72,7 @@ def kakao_callback(request):
     if not code:
         return Response({"error": "code가 없습니다."}, status=status.HTTP_400_BAD_REQUEST)
 
+    # 카카오 Access Token 요청
     token_req = requests.post(
         "https://kauth.kakao.com/oauth/token",
         data={
@@ -93,6 +90,7 @@ def kakao_callback(request):
 
     kakao_access_token = token_json["access_token"]
 
+    # 카카오 사용자 정보 요청
     profile_req = requests.get(
         "https://kapi.kakao.com/v2/user/me",
         headers={"Authorization": f"Bearer {kakao_access_token}"},
@@ -110,7 +108,7 @@ def kakao_callback(request):
     if not kakao_id:
         return Response({"error": "카카오 ID 없음"}, status=status.HTTP_400_BAD_REQUEST)
 
-    # 존재하면 로그인 없으면 생성
+    # 사용자 생성 또는 로그인
     try:
         user = User.objects.get(username=kakao_id)
         message = "login success"
@@ -136,3 +134,15 @@ def kakao_callback(request):
     resp.set_cookie("accessToken", access_token, httponly=True, secure=True, samesite="None")
     resp.set_cookie("refreshToken", refresh_token, httponly=True, secure=True, samesite="None")
     return resp
+
+# JWT 인증 기반 카카오 유저 인포 API
+@swagger_auto_schema(
+    method="get",
+    operation_description="JWT 인증된 카카오 로그인 사용자 정보 반환"
+)
+@api_view(["GET"])
+@permission_classes([permissions.IsAuthenticated])
+def kakao_userinfo(request):
+    #JWT 인증된 사용자 정보 반환
+    user = request.user
+    return Response(UserSerializer(user).data)
