@@ -140,9 +140,9 @@ def kakao_callback(request):
     method="get",
     operation_description="JWT 인증된 카카오 로그인 사용자 정보 반환"
 )
+
 @api_view(["GET"])
 @permission_classes([permissions.IsAuthenticated])
 def kakao_userinfo(request):
-    #JWT 인증된 사용자 정보 반환
     user = request.user
-    return Response(UserSerializer(user).data)
+    return Response({"nickname": user.first_name})
