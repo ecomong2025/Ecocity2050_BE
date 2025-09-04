@@ -39,7 +39,7 @@ class UserDetailView(generics.RetrieveAPIView):
     responses={200: openapi.Response("OK", schema=openapi.Schema(
         type=openapi.TYPE_OBJECT,
         properties={"auth_url": openapi.Schema(type=openapi.TYPE_STRING)}
-    ))}
+    ))},
 )
 @api_view(["GET"])
 @permission_classes([permissions.AllowAny])
@@ -102,7 +102,6 @@ def kakao_callback(request):
     profile = profile_req.json()
     kakao_id = profile.get("id")
     kakao_account = profile.get("kakao_account", {})
-    email = kakao_account.get("email")
     nickname = (kakao_account.get("profile") or {}).get("nickname", "")
 
     if not kakao_id:
@@ -113,7 +112,7 @@ def kakao_callback(request):
         user = User.objects.get(username=kakao_id)
         message = "login success"
     except User.DoesNotExist:
-        user = User.objects.create_user(username=kakao_id, email=email)
+        user = User.objects.create_user(username=kakao_id)
         user.first_name = nickname or ""
         user.save()
         message = "register success"
@@ -138,9 +137,8 @@ def kakao_callback(request):
 # JWT 인증 기반 카카오 유저 인포 API
 @swagger_auto_schema(
     method="get",
-    operation_description="JWT 인증된 카카오 로그인 사용자 정보 반환"
+    operation_description="JWT 인증된 카카오 로그인 사용자 정보 반환",
 )
-
 @api_view(["GET"])
 @permission_classes([permissions.IsAuthenticated])
 def kakao_userinfo(request):
