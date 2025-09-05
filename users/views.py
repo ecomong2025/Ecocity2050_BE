@@ -6,6 +6,7 @@ from rest_framework.response import Response
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework_simplejwt.views import TokenObtainPairView
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
+from rest_framework_simplejwt.tokens import RefreshToken
 
 from drf_yasg.utils import swagger_auto_schema
 from drf_yasg import openapi
@@ -14,11 +15,13 @@ from .serializers import UserSerializer
 
 User = get_user_model()
 
+
 # JWT 로그인 (username/password)
 class MyTokenObtainPairView(TokenObtainPairView):
     @swagger_auto_schema(operation_description="JWT 토큰 발급 (username/password 로그인)")
     def post(self, request, *args, **kwargs):
         return super().post(request, *args, **kwargs)
+
 
 # 회원 정보 조회 (JWT)
 class UserDetailView(generics.RetrieveAPIView):
@@ -31,6 +34,7 @@ class UserDetailView(generics.RetrieveAPIView):
 
     def get_object(self):
         return self.request.user
+
 
 # 카카오 로그인 시작: 인증 URL 반환
 @swagger_auto_schema(
@@ -51,6 +55,7 @@ def kakao_login(request):
     )
     return Response({"auth_url": kakao_auth_url})
 
+
 # 카카오 콜백: code로 JWT 발급 + 사용자 생성/로그인
 code_param = openapi.Parameter(
     "code",
@@ -59,6 +64,7 @@ code_param = openapi.Parameter(
     type=openapi.TYPE_STRING,
     required=True,
 )
+
 
 @swagger_auto_schema(
     method="get",
@@ -134,6 +140,7 @@ def kakao_callback(request):
     resp.set_cookie("refreshToken", refresh_token, httponly=True, secure=True, samesite="None")
     return resp
 
+
 # JWT 인증 기반 카카오 유저 인포 API
 @swagger_auto_schema(
     method="get",
@@ -144,3 +151,67 @@ def kakao_callback(request):
 def kakao_userinfo(request):
     user = request.user
     return Response({"nickname": user.first_name})
+
+
+# 카카오 로그아웃 (JWT 토큰 만료)
+@swagger_auto_schema(
+    method="post",
+    operation_description="카카오 로그아웃 (JWT 토큰 블랙리스트 처리)",
+    request_body=openapi.Schema(
+        type=openapi.TYPE_OBJECT,
+        properties={
+            "refresh": openapi.Schema(type=openapi.TYPE_STRING, description="Refresh Token")
+        },
+        required=["refresh"]
+    ),
+    responses={
+        200: openapi.Response(
+            "로그아웃 성공",
+            schema=openapi.Schema(
+                type=openapi.TYPE_OBJECT,
+                properties={
+                    "message": openapi.Schema(type=openapi.TYPE_STRING)
+                }
+            )
+        ),
+        400: openapi.Response("잘못된 요청")
+    }
+)
+@api_view(["POST"])
+@permission_classes([permissions.IsAuthenticated])
+def kakao_logout(request):
+    try:
+        # 요청 본문에서 refresh token 가져오기
+        refresh_token = request.data.get("refresh")
+
+        # 쿠키에서 refresh token 가져오기 (fallback)
+        if not refresh_token:
+            refresh_token = request.COOKIES.get("refreshToken")
+
+        if not refresh_token:
+            return Response(
+                {"error": "refresh token이 필요합니다."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        # Refresh Token을 블랙리스트에 추가하여 무효화
+        token = RefreshToken(refresh_token)
+        token.blacklist()
+
+        # 쿠키 삭제를 위한 응답 생성
+        resp = Response(
+            {"message": "로그아웃 성공"},
+            status=status.HTTP_200_OK
+        )
+
+        # 쿠키 삭제
+        resp.delete_cookie("accessToken", samesite="None")
+        resp.delete_cookie("refreshToken", samesite="None")
+
+        return resp
+
+    except Exception as e:
+        return Response(
+            {"error": f"로그아웃 처리 중 오류가 발생했습니다: {str(e)}"},
+            status=status.HTTP_400_BAD_REQUEST
+        )
