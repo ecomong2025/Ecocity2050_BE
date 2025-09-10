@@ -1,3 +1,4 @@
+{% load socialaccount %}
 <!DOCTYPE html>
 <html lang="ko">
 <head>
@@ -6,452 +7,170 @@
     <title>카카오 로그인 테스트</title>
     <style>
         body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            max-width: 800px;
-            margin: 0 auto;
+            font-family: Arial, sans-serif;
+            max-width: 600px;
+            margin: 50px auto;
             padding: 20px;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            min-height: 100vh;
+            background-color: #f5f5f5;
         }
-
         .container {
-            background: white;
-            border-radius: 15px;
+            background-color: white;
             padding: 30px;
-            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
-        }
-
-        h1 {
-            color: #333;
-            text-align: center;
-            margin-bottom: 30px;
-        }
-
-        .section {
-            margin: 20px 0;
-            padding: 20px;
-            border: 2px solid #f0f0f0;
             border-radius: 10px;
-            background: #fafafa;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            text-align: center;
         }
-
-        .section h2 {
-            color: #555;
-            margin-top: 0;
-        }
-
-        button {
-            background: linear-gradient(45deg, #FEE500, #FFEB3B);
+        .kakao-btn {
+            background-color: #FEE500;
             border: none;
+            border-radius: 6px;
             padding: 12px 24px;
-            border-radius: 8px;
+            margin: 10px;
             cursor: pointer;
             font-size: 16px;
             font-weight: bold;
-            color: #333;
-            transition: all 0.3s ease;
-            margin: 5px;
-        }
-
-        button:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
-        }
-
-        button:disabled {
-            opacity: 0.6;
-            cursor: not-allowed;
-            transform: none;
-        }
-
-        .logout-btn {
-            background: linear-gradient(45deg, #ff6b6b, #ee5a52);
-            color: white;
-        }
-
-        .info-btn {
-            background: linear-gradient(45deg, #4facfe, #00f2fe);
-            color: white;
-        }
-
-        #result {
-            margin-top: 20px;
-            padding: 15px;
-            background: #f8f9fa;
-            border-radius: 8px;
-            border-left: 4px solid #007bff;
-            white-space: pre-wrap;
-            font-family: 'Courier New', monospace;
-            font-size: 14px;
-            max-height: 300px;
-            overflow-y: auto;
-        }
-
-        .status {
+            color: #000;
+            text-decoration: none;
             display: inline-block;
-            padding: 4px 8px;
-            border-radius: 4px;
-            font-size: 12px;
-            font-weight: bold;
-            margin-left: 10px;
+            transition: background-color 0.3s;
         }
-
-        .status.logged-in {
-            background: #d4edda;
-            color: #155724;
+        .kakao-btn:hover {
+            background-color: #FDD835;
         }
-
-        .status.logged-out {
-            background: #f8d7da;
-            color: #721c24;
+        .api-btn {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            padding: 12px 24px;
+            margin: 10px;
+            cursor: pointer;
+            font-size: 16px;
+            text-decoration: none;
+            display: inline-block;
+            transition: background-color 0.3s;
         }
-
-        .user-info {
-            background: #e7f3ff;
-            border: 1px solid #b8daff;
-            padding: 15px;
-            border-radius: 8px;
-            margin-top: 10px;
+        .api-btn:hover {
+            background-color: #0056b3;
+        }
+        .logout-btn {
+            background-color: #dc3545;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            padding: 12px 24px;
+            margin: 10px;
+            cursor: pointer;
+            font-size: 16px;
+            text-decoration: none;
+            display: inline-block;
+            transition: background-color 0.3s;
+        }
+        .logout-btn:hover {
+            background-color: #c82333;
+        }
+        .section {
+            margin: 30px 0;
+            padding: 20px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            background-color: #f9f9f9;
         }
     </style>
 </head>
 <body>
     <div class="container">
-        <h1>🥥 카카오 로그인 테스트</h1>
+        <h1>EcoCity2050 카카오 로그인 테스트</h1>
 
         <div class="section">
-            <h2>현재 상태 <span id="loginStatus" class="status logged-out">로그아웃</span></h2>
-            <div id="userInfo" class="user-info" style="display: none;">
-                <strong>사용자 정보:</strong>
-                <div id="userDetails"></div>
-            </div>
+            <h2>1. Allauth 기본 카카오 로그인</h2>
+            <p>django-allauth의 기본 카카오 로그인 흐름을 사용합니다.</p>
+            <a href="{% provider_login_url 'kakao' %}" class="kakao-btn">
+                🎯 카카오로 로그인하기
+            </a>
         </div>
 
         <div class="section">
-            <h2>카카오 로그인</h2>
-            <button onclick="startKakaoLogin()">카카오 로그인 시작</button>
-            <p><small>카카오 개발자 콘솔에서 리다이렉트 URI를 설정해주세요: <code>http://localhost:8000/users/kakao/callback/</code></small></p>
+            <h2>2. API 기반 카카오 로그인</h2>
+            <p>JWT 토큰을 반환하는 커스텀 API를 사용합니다.</p>
+            <button onclick="kakaoLoginAPI()" class="api-btn">
+                📱 API로 카카오 로그인
+            </button>
         </div>
 
+        {% if user.is_authenticated %}
         <div class="section">
-            <h2>사용자 정보</h2>
-            <button class="info-btn" onclick="getUserInfo()" id="userInfoBtn" disabled>사용자 정보 조회</button>
-            <button class="info-btn" onclick="getKakaoUserInfo()" id="kakaoInfoBtn" disabled>카카오 사용자 정보 조회</button>
+            <h2>현재 로그인 상태</h2>
+            <p>사용자: {{ user.username }}</p>
+            <p>이름: {{ user.first_name }}</p>
+            <a href="{% url 'account_logout' %}" class="logout-btn">로그아웃</a>
         </div>
+        {% else %}
+        <div class="section">
+            <h2>현재 상태</h2>
+            <p>로그인되지 않음</p>
+        </div>
+        {% endif %}
 
         <div class="section">
-            <h2>로그아웃</h2>
-            <button class="logout-btn" onclick="logout()" id="logoutBtn" disabled>로그아웃</button>
-        </div>
-
-        <div class="section">
-            <h2>응답 결과</h2>
-            <div id="result">여기에 API 응답 결과가 표시됩니다...</div>
+            <h2>유용한 링크</h2>
+            <a href="/admin/" class="api-btn" target="_blank">관리자 페이지</a>
+            <a href="/swagger/" class="api-btn" target="_blank">API 문서</a>
+            <a href="/accounts/kakao/login/" class="kakao-btn">직접 카카오 로그인</a>
         </div>
     </div>
 
     <script>
-        // 환경에 따른 API URL 설정
-        const isProduction = window.location.hostname === 'ecocity2050-be.onrender.com';
-        const API_BASE = isProduction
-            ? 'https://ecocity2050-be.onrender.com/users'
-            : 'http://localhost:8000/users';
-        let accessToken = '';
-        let refreshToken = '';
-
-        // 페이지 로드 시 토큰 확인
-        window.onload = function() {
-            checkLoginStatus();
-        };
-
-        function logResult(message, data = null) {
-            const resultDiv = document.getElementById('result');
-            const timestamp = new Date().toLocaleTimeString();
-            let output = `[${timestamp}] ${message}`;
-            if (data) {
-                output += '\n' + JSON.stringify(data, null, 2);
-            }
-            resultDiv.textContent = output + '\n' + resultDiv.textContent;
-        }
-
-        function updateUI(isLoggedIn, userInfo = null) {
-            const statusEl = document.getElementById('loginStatus');
-            const userInfoEl = document.getElementById('userInfo');
-            const userDetailsEl = document.getElementById('userDetails');
-            const buttons = ['userInfoBtn', 'kakaoInfoBtn', 'logoutBtn'];
-
-            if (isLoggedIn) {
-                statusEl.textContent = '로그인';
-                statusEl.className = 'status logged-in';
-                buttons.forEach(id => document.getElementById(id).disabled = false);
-
-                if (userInfo) {
-                    userInfoEl.style.display = 'block';
-                    userDetailsEl.innerHTML = `
-                        <div>Username: ${userInfo.username || 'N/A'}</div>
-                        <div>Nickname: ${userInfo.first_name || 'N/A'}</div>
-                        <div>Email: ${userInfo.email || 'N/A'}</div>
-                    `;
-                }
-            } else {
-                statusEl.textContent = '로그아웃';
-                statusEl.className = 'status logged-out';
-                buttons.forEach(id => document.getElementById(id).disabled = true);
-                userInfoEl.style.display = 'none';
-                accessToken = '';
-                refreshToken = '';
-            }
-        }
-
-        function setTokensManually() {
-            const accessTokenInput = document.getElementById('accessTokenInput').value.trim();
-            const refreshTokenInput = document.getElementById('refreshTokenInput').value.trim();
-
-            if (!accessTokenInput || !refreshTokenInput) {
-                logResult('Error: 토큰을 모두 입력해주세요');
-                return;
-            }
-
-            accessToken = accessTokenInput;
-            refreshToken = refreshTokenInput;
-
-            localStorage.setItem('accessToken', accessToken);
-            localStorage.setItem('refreshToken', refreshToken);
-
-            logResult('토큰이 수동으로 설정되었습니다');
-            checkLoginStatus();
-        }
-
-        function clearTokens() {
-            accessToken = '';
-            refreshToken = '';
-            localStorage.removeItem('accessToken');
-            localStorage.removeItem('refreshToken');
-
-            updateUI(false);
-            logResult('토큰이 삭제되었습니다');
-        }
-
-        function checkLoginStatus() {
-            // 쿠키에서 토큰 확인 (실제로는 쿠키가 httpOnly이므로 접근 불가)
-            // 여기서는 localStorage를 사용하여 시뮬레이션
-            accessToken = localStorage.getItem('accessToken') || '';
-            refreshToken = localStorage.getItem('refreshToken') || '';
-
-            if (accessToken) {
-                getUserInfo();
-            } else {
-                updateUI(false);
-                logResult('로그인되지 않음');
-            }
-        }
-
-        async function startKakaoLogin() {
+        async function kakaoLoginAPI() {
             try {
-                logResult('카카오 로그인 시작...');
-                const response = await fetch(`${API_BASE}/kakao/login/`);
+                // 1. 카카오 로그인 URL 가져오기
+                const response = await fetch('/users/kakao/login/');
                 const data = await response.json();
 
                 if (data.auth_url) {
-                    logResult('카카오 인증 URL 받음', data);
+                    // 2. 카카오 인증 페이지로 이동
                     window.location.href = data.auth_url;
                 } else {
-                    logResult('Error: 인증 URL을 받을 수 없습니다', data);
+                    alert('로그인 URL을 가져올 수 없습니다.');
                 }
             } catch (error) {
-                logResult('Error:', error.message);
+                console.error('Error:', error);
+                alert('로그인 중 오류가 발생했습니다.');
             }
         }
 
-        async function getUserInfo() {
-            if (!accessToken) {
-                logResult('Error: 액세스 토큰이 없습니다');
-                return;
+        // JWT 토큰이 있는지 확인하는 함수
+        function checkJWTToken() {
+            const token = getCookie('accessToken');
+            if (token) {
+                console.log('JWT Token found:', token);
+                return true;
             }
+            return false;
+        }
 
-            try {
-                logResult('사용자 정보 조회 중...');
-                logResult('요청 URL:', `${API_BASE}/profile/`);
-
-                const response = await fetch(`${API_BASE}/profile/`, {
-                    headers: {
-                        'Authorization': `Bearer ${accessToken}`,
-                        'Content-Type': 'application/json'
-                    }
-                });
-
-                logResult('응답 상태:', `${response.status} ${response.statusText}`);
-
-                if (response.ok) {
-                    const data = await response.json();
-                    logResult('사용자 정보 조회 성공', data);
-                    updateUI(true, data);
-                } else {
-                    // HTML 응답인지 확인
-                    const contentType = response.headers.get('content-type');
-                    if (contentType && contentType.includes('text/html')) {
-                        const htmlText = await response.text();
-                        logResult('HTML 응답 받음 (처음 200자):', htmlText.substring(0, 200));
-                    } else {
-                        const errorData = await response.json();
-                        logResult('Error: 사용자 정보 조회 실패', errorData);
-                    }
-                    if (response.status === 401) {
-                        updateUI(false);
+        // 쿠키에서 값을 가져오는 함수
+        function getCookie(name) {
+            let cookieValue = null;
+            if (document.cookie && document.cookie !== '') {
+                const cookies = document.cookie.split(';');
+                for (let i = 0; i < cookies.length; i++) {
+                    const cookie = cookies[i].trim();
+                    if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                        break;
                     }
                 }
-            } catch (error) {
-                logResult('Error:', error.message);
-                logResult('Full error:', error);
             }
+            return cookieValue;
         }
 
-        async function getKakaoUserInfo() {
-            if (!accessToken) {
-                logResult('Error: 액세스 토큰이 없습니다');
-                return;
+        // 페이지 로드 시 토큰 확인
+        document.addEventListener('DOMContentLoaded', function() {
+            if (checkJWTToken()) {
+                console.log('사용자가 JWT 토큰으로 인증되었습니다.');
             }
-
-            try {
-                logResult('카카오 사용자 정보 조회 중...');
-                const response = await fetch(`${API_BASE}/kakao/userinfo/`, {
-                    headers: {
-                        'Authorization': `Bearer ${accessToken}`,
-                        'Content-Type': 'application/json'
-                    }
-                });
-
-                if (response.ok) {
-                    const data = await response.json();
-                    logResult('카카오 사용자 정보 조회 성공', data);
-                } else {
-                    const errorData = await response.json();
-                    logResult('Error: 카카오 사용자 정보 조회 실패', errorData);
-                }
-            } catch (error) {
-                logResult('Error:', error.message);
-            }
-        }
-
-        async function kakaoLogout() {
-            try {
-                logResult('카카오 완전 로그아웃 시도...');
-
-                // 카카오 로그아웃 페이지로 이동 (Logout Redirect URI 등록 없이)
-                const kakaoLogoutUrl = `https://kauth.kakao.com/oauth/logout?client_id=${encodeURIComponent('YOUR_KAKAO_REST_API_KEY')}`;
-
-                // 새 창으로 카카오 로그아웃 실행
-                const popup = window.open(kakaoLogoutUrl, 'kakaoLogout', 'width=500,height=600');
-
-                // 팝업이 닫히면 로컬 토큰도 삭제
-                const checkClosed = setInterval(() => {
-                    if (popup.closed) {
-                        clearInterval(checkClosed);
-                        logResult('카카오 로그아웃 팝업 닫힘 - 로컬 토큰 정리 중...');
-                        clearTokens();
-                    }
-                }, 1000);
-
-                logResult('카카오 로그아웃 팝업이 열렸습니다. 팝업에서 로그아웃을 완료해주세요.');
-
-            } catch (error) {
-                logResult('Error:', error.message);
-            }
-        }
-
-        function clearCookiesAndReload() {
-            logResult('쿠키 삭제 및 페이지 새로고침...');
-
-            // localStorage 토큰 삭제
-            clearTokens();
-
-            // 가능한 모든 카카오 관련 쿠키 삭제 시도
-            const cookiesToDelete = [
-                '_kadu', '_kadub', '_kahai', '_kawlt', '_kawltea', '_karmt', '_karmtea',
-                'TIARA', 'TUID', '_T_ANO'
-            ];
-
-            cookiesToDelete.forEach(cookieName => {
-                // 다양한 도메인으로 쿠키 삭제 시도
-                document.cookie = `${cookieName}=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/; domain=.kakao.com;`;
-                document.cookie = `${cookieName}=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/; domain=.kauth.kakao.com;`;
-                document.cookie = `${cookieName}=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;`;
-            });
-
-            // 1초 후 페이지 새로고침
-            setTimeout(() => {
-                location.reload();
-            }, 1000);
-        }
-
-        async function logout() {
-            if (!refreshToken) {
-                logResult('Error: 리프레시 토큰이 없습니다');
-                return;
-            }
-
-            try {
-                logResult('로그아웃 중...');
-                const response = await fetch(`${API_BASE}/kakao/logout/`, {
-                    method: 'POST',
-                    headers: {
-                        'Authorization': `Bearer ${accessToken}`,
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({
-                        refresh: refreshToken
-                    })
-                });
-
-                if (response.ok) {
-                    const data = await response.json();
-                    logResult('로그아웃 성공', data);
-
-                    // 로컬스토리지에서 토큰 제거
-                    localStorage.removeItem('accessToken');
-                    localStorage.removeItem('refreshToken');
-
-                    updateUI(false);
-                } else {
-                    const errorData = await response.json();
-                    logResult('Error: 로그아웃 실패', errorData);
-                }
-            } catch (error) {
-                logResult('Error:', error.message);
-            }
-        }
-
-        // URL에 code 파라미터가 있으면 카카오 콜백 처리
-        const urlParams = new URLSearchParams(window.location.search);
-        const code = urlParams.get('code');
-
-        if (code) {
-            logResult('카카오 콜백 코드 감지됨, 토큰 요청 중...', { code });
-
-            fetch(`${API_BASE}/kakao/callback/?code=${code}`)
-                .then(response => response.json())
-                .then(data => {
-                    if (data.token) {
-                        accessToken = data.token.access;
-                        refreshToken = data.token.refresh;
-
-                        // localStorage에 토큰 저장 (테스트 목적)
-                        localStorage.setItem('accessToken', accessToken);
-                        localStorage.setItem('refreshToken', refreshToken);
-
-                        logResult('카카오 로그인 성공!', data);
-                        updateUI(true, data.user);
-
-                        // URL에서 code 파라미터 제거
-                        window.history.replaceState({}, document.title, window.location.pathname);
-                    } else {
-                        logResult('Error: 토큰을 받을 수 없습니다', data);
-                    }
-                })
-                .catch(error => {
-                    logResult('Error:', error.message);
-                });
-        }
+        });
     </script>
 </body>
 </html>

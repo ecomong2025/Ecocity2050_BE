@@ -8,9 +8,10 @@ urlpatterns = [
     # 사용자 정보 조회
     path('profile/', views.UserDetailView.as_view(), name='user_detail'),
 
-    # 카카오 로그인 관련
-    path('kakao/login/', views.kakao_login, name='kakao_login'),
-    path('kakao/callback/', views.kakao_callback, name='kakao_callback'),
-    path('kakao/userinfo/', views.kakao_userinfo, name='kakao_userinfo'),
-    path('kakao/logout/', views.kakao_logout, name='kakao_logout'),
+    # allauth 기반 카카오 로그인 처리
+    path('kakao/login/', views.KakaoLoginView.as_view(), name='kakao_login_api'),
+
+
+    path('kakao/callback/', views.KakaoCallbackView.as_view(), name='kakao_callback_api'),
+    path('logout/', views.LogoutView.as_view(), name='logout'),
 ]
