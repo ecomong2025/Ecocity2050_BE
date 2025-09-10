@@ -15,16 +15,14 @@ from pathlib import Path
 from datetime import timedelta
 from decouple import config
 from dotenv import load_dotenv
-load_dotenv()
 
-KAKAO_REST_API_KEY = os.getenv("KAKAO_REST_API_KEY")
-KAKAO_REDIRECT_URI = os.getenv("KAKAO_REDIRECT_URI")
+load_dotenv()
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = os.getenv("SECRET_KEY", "fallback-secret-key")  # .env에 SECRET_KEY 저장
+SECRET_KEY = os.getenv("SECRET_KEY", "fallback-secret-key")
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
@@ -39,6 +37,7 @@ INSTALLED_APPS = [
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
+    "django.contrib.sites",
 
     # 3rd party
     "rest_framework",
@@ -46,12 +45,18 @@ INSTALLED_APPS = [
     "drf_yasg",
     "corsheaders",
 
+    # allauth
+    'allauth',
+    'allauth.account',
+    'allauth.socialaccount',
+    'allauth.socialaccount.providers.kakao',
+
     # local apps
     "users",
 ]
 
 MIDDLEWARE = [
-    "corsheaders.middleware.CorsMiddleware",  # CORS 미들웨어 -> 최상단
+    "corsheaders.middleware.CorsMiddleware",
     "django.middleware.security.SecurityMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
@@ -59,6 +64,7 @@ MIDDLEWARE = [
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
+    "allauth.account.middleware.AccountMiddleware",  # allauth middleware 추가
 ]
 
 ROOT_URLCONF = "EcoCity2050_BE.urls"
@@ -81,6 +87,12 @@ TEMPLATES = [
 
 WSGI_APPLICATION = "EcoCity2050_BE.wsgi.application"
 
+# Authentication backends
+AUTHENTICATION_BACKENDS = [
+    'django.contrib.auth.backends.ModelBackend',
+    'allauth.account.auth_backends.AuthenticationBackend',
+]
+
 # Database -> postgresql
 DATABASES = {
     'default': {
@@ -92,6 +104,7 @@ DATABASES = {
         'PORT': config('DB_PORT', default='5432'),
     }
 }
+
 # Password validation
 AUTH_PASSWORD_VALIDATORS = [
     {"NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator"},
@@ -118,6 +131,34 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 # Custom user model
 AUTH_USER_MODEL = "users.CustomUser"
 
+# Sites framework (allauth 필요)
+SITE_ID = 1
+
+# Allauth 설정
+SOCIALACCOUNT_LOGIN_ON_GET = True
+LOGIN_REDIRECT_URL = '/'  # 로그인 성공 후 리다이렉트 URL
+ACCOUNT_LOGOUT_REDIRECT_URL = '/'  # 로그아웃 후 리다이렉트 URL
+ACCOUNT_LOGOUT_ON_GET = True  # GET 요청으로도 로그아웃 가능
+
+# 소셜 로그인 설정
+SOCIALACCOUNT_PROVIDERS = {
+    'kakao': {
+        'METHOD': 'oauth2',
+        'SCOPE': ['profile_nickname'],
+        'AUTH_PARAMS': {'access_type': 'online'},
+        'OAUTH_PKCE_ENABLED': True,
+    }
+}
+
+# 계정 관련 설정
+ACCOUNT_EMAIL_REQUIRED = False
+ACCOUNT_USERNAME_REQUIRED = True
+ACCOUNT_SIGNUP_PASSWORD_ENTER_TWICE = False
+ACCOUNT_SESSION_REMEMBER = True
+ACCOUNT_UNIQUE_EMAIL = True
+ACCOUNT_USER_MODEL_USERNAME_FIELD = "username"
+ACCOUNT_USER_MODEL_EMAIL_FIELD = "email"
+
 # REST Framework + JWT 설정
 REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": (
@@ -130,7 +171,7 @@ SIMPLE_JWT = {
     'ACCESS_TOKEN_LIFETIME': timedelta(minutes=60),
     'REFRESH_TOKEN_LIFETIME': timedelta(days=7),
     'ROTATE_REFRESH_TOKENS': True,
-    'BLACKLIST_AFTER_ROTATION': True,  # 토큰 블랙리스트 설정
+    'BLACKLIST_AFTER_ROTATION': True,
     'UPDATE_LAST_LOGIN': False,
 
     'ALGORITHM': 'HS256',
@@ -166,7 +207,7 @@ CORS_ALLOWED_ORIGINS = [
     "https://ecocity2050-be.onrender.com",
 ]
 
-CORS_ALLOW_CREDENTIALS = True  # 쿠키 인증 허용
+CORS_ALLOW_CREDENTIALS = True
 
 # 개발 환경에서만 모든 오리진 허용
 if DEBUG:
