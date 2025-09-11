@@ -1,7 +1,9 @@
 import requests
+import uuid
 from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.shortcuts import redirect
+from django.utils import timezone
 from rest_framework import generics, permissions, status
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -13,6 +15,7 @@ from drf_yasg.utils import swagger_auto_schema
 from drf_yasg import openapi
 
 from .serializers import UserSerializer
+from .models import KakaoAuthSession
 
 User = get_user_model()
 
@@ -73,6 +76,128 @@ class KakaoLoginView(APIView):
         return Response({"auth_url": auth_url})
 
 
+# Unity용 카카오 로그인 시작: state 포함
+class KakaoUnityLoginView(APIView):
+    permission_classes = [permissions.AllowAny]
+
+    @swagger_auto_schema(
+        operation_description="Unity용 카카오 로그인 시작 (state 기반 세션)",
+        responses={200: openapi.Response("OK", schema=openapi.Schema(
+            type=openapi.TYPE_OBJECT,
+            properties={
+                "auth_url": openapi.Schema(type=openapi.TYPE_STRING),
+                "state": openapi.Schema(type=openapi.TYPE_STRING)
+            }
+        ))},
+    )
+    def get(self, request):
+        try:
+            social_app = SocialApp.objects.get(provider='kakao')
+        except SocialApp.DoesNotExist:
+            return Response(
+                {"error": "카카오 소셜 앱이 등록되지 않았습니다. Django admin에서 SocialApp을 등록하세요."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        # 세션 생성
+        session = KakaoAuthSession.objects.create()
+        state = str(session.state)
+
+        # redirect uri
+        callback_url = request.build_absolute_uri('/accounts/kakao/login/callback/')
+
+        # state 포함한 카카오 인가 URL 생성
+        auth_url = (
+            "https://kauth.kakao.com/oauth/authorize"
+            f"?response_type=code"
+            f"&client_id={social_app.client_id}"
+            f"&redirect_uri={callback_url}"
+            f"&scope=profile_nickname"
+            f"&state={state}"
+        )
+
+        return Response({
+            "auth_url": auth_url,
+            "state": state
+        })
+
+
+# Unity용 카카오 로그인 세션 상태 폴링
+class KakaoUnitySessionView(APIView):
+    permission_classes = [permissions.AllowAny]
+
+    @swagger_auto_schema(
+        operation_description="Unity용 카카오 로그인 세션 상태 확인 (폴링용)",
+        manual_parameters=[
+            openapi.Parameter(
+                "state",
+                openapi.IN_QUERY,
+                description="세션 상태 식별자",
+                type=openapi.TYPE_STRING,
+                required=True,
+            )
+        ],
+        responses={
+            200: openapi.Response("로그인 완료", schema=openapi.Schema(
+                type=openapi.TYPE_OBJECT,
+                properties={
+                    "status": openapi.Schema(type=openapi.TYPE_STRING, enum=["completed"]),
+                    "user": openapi.Schema(type=openapi.TYPE_OBJECT),
+                    "message": openapi.Schema(type=openapi.TYPE_STRING)
+                }
+            )),
+            202: openapi.Response("로그인 진행중", schema=openapi.Schema(
+                type=openapi.TYPE_OBJECT,
+                properties={
+                    "status": openapi.Schema(type=openapi.TYPE_STRING, enum=["pending"])
+                }
+            )),
+            404: openapi.Response("세션 없음 또는 만료"),
+            400: openapi.Response("잘못된 요청")
+        }
+    )
+    def get(self, request):
+        state = request.GET.get('state')
+        if not state:
+            return Response(
+                {"error": "state 파라미터가 필요합니다."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        try:
+            session = KakaoAuthSession.objects.get(state=state)
+        except KakaoAuthSession.DoesNotExist:
+            return Response(
+                {"error": "유효하지 않은 세션입니다."},
+                status=status.HTTP_404_NOT_FOUND
+            )
+
+        # 세션 만료 체크
+        if session.is_expired:
+            session.delete()
+            return Response(
+                {"error": "세션이 만료되었습니다."},
+                status=status.HTTP_404_NOT_FOUND
+            )
+
+        # 로그인 완료된 경우
+        if session.is_completed and session.user:
+            # 세션 삭제 (일회성)
+            user_data = UserSerializer(session.user).data
+            session.delete()
+
+            return Response({
+                "status": "completed",
+                "user": user_data,
+                "message": "로그인 성공"
+            }, status=status.HTTP_200_OK)
+
+        # 로그인 진행중
+        return Response({
+            "status": "pending"
+        }, status=status.HTTP_202_ACCEPTED)
+
+
 # 카카오 콜백: code로 JWT 발급 (카카오 토큰 교환 + 사용자 정보 조회)
 class KakaoCallbackView(APIView):
     permission_classes = [permissions.AllowAny]
@@ -86,11 +211,20 @@ class KakaoCallbackView(APIView):
                 description="카카오 OAuth 인가 코드",
                 type=openapi.TYPE_STRING,
                 required=True,
+            ),
+            openapi.Parameter(
+                "state",
+                openapi.IN_QUERY,
+                description="Unity 세션 상태 (선택적)",
+                type=openapi.TYPE_STRING,
+                required=False,
             )
         ],
     )
     def get(self, request):
         code = request.GET.get("code")
+        state = request.GET.get("state")  # Unity에서 온 경우에만 있음
+
         if not code:
             return Response({"error": "code가 없습니다."}, status=status.HTTP_400_BAD_REQUEST)
 
@@ -170,7 +304,27 @@ class KakaoCallbackView(APIView):
             user.save()
             message = "register success"
 
-        # JWT 발급
+        # Unity 세션 처리 (state가 있는 경우)
+        if state:
+            try:
+                session = KakaoAuthSession.objects.get(state=state)
+                if not session.is_expired:
+                    session.user = user
+                    session.is_completed = True
+                    session.completed_at = timezone.now()
+                    session.save()
+
+                    # Unity용 간단한 성공 페이지 반환
+                    return Response({
+                        "message": "Unity 로그인 완료! 앱으로 돌아가세요.",
+                        "success": True
+                    }, status=status.HTTP_200_OK)
+                else:
+                    session.delete()
+            except KakaoAuthSession.DoesNotExist:
+                pass
+
+        # 일반 웹 로그인 처리 (JWT 발급)
         refresh = RefreshToken.for_user(user)
         access_token_jwt = str(refresh.access_token)
         refresh_token_jwt = str(refresh)
