@@ -22,11 +22,14 @@ urlpatterns = [
     # 카카오 콜백 전용 (카카오가 실제로 호출하는 URL)
     path('accounts/kakao/login/callback/', KakaoCallbackView.as_view(), name='kakao_callback'),
 
-
     # Swagger & ReDoc
     path(r"swagger(<format>\.json|\.yaml)", schema_view.without_ui(cache_timeout=0), name="schema-json"),
     path("swagger/", schema_view.with_ui('swagger', cache_timeout=0), name="swagger-ui"),
     path("redoc/", schema_view.with_ui('redoc', cache_timeout=0), name="redoc"),
 
+    # 카카오 로그인 테스트
     path('test/', TemplateView.as_view(template_name='kakao_test.html'), name='kakao_test'),
+
+    # 도시 이름
+    path("", include("city.urls")),
 ]
