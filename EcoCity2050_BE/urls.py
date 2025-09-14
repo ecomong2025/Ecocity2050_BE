@@ -32,4 +32,7 @@ urlpatterns = [
 
     # 도시 이름
     path("", include("city.urls")),
+
+    # 게임 저장/로드 API
+    path("", include("savegame.urls")),
 ]

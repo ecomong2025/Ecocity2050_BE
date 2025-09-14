@@ -53,6 +53,9 @@ INSTALLED_APPS = [
 
     # local apps
     "users",
+    "city",
+    "savegame",
+
 ]
 
 MIDDLEWARE = [
